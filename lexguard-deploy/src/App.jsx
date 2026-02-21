@@ -250,9 +250,9 @@ JSON (strings under 100 chars):
     }
 
     try {
-      const res = await fetch("https://api.anthropic.com/v1/messages",{
-        method:"POST",
-        headers:{"Content-Type":"application/json","x-api-key":key,"anthropic-version":"2023-06-01"},
+      const res = await fetch("/api/analyze",{
+  method:"POST",
+  headers:{"Content-Type":"application/json"},
         body:JSON.stringify({model:MODEL,max_tokens:4000,messages:[{role:"user",content:prompt}]})
       });
       const data = await res.json();
