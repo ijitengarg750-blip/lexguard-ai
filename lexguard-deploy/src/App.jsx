@@ -358,8 +358,7 @@ JSON (strings under 100 chars):
             </div>
 
             <div>
-              <div className="upload-zone" style={{position:"relative"}}
-                className={`upload-zone${drag?" drag":""}`}
+              <div className={`upload-zone${drag?" drag":""}`} style={{position:"relative"}}
                 onDragOver={e=>{e.preventDefault();setDrag(true);}}
                 onDragLeave={()=>setDrag(false)}
                 onDrop={e=>{e.preventDefault();setDrag(false);onFile(e.dataTransfer.files[0]);}}
