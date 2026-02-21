@@ -250,30 +250,35 @@ JSON (strings under 100 chars):
     }
 
     try {
-      const res = await fetch("/api/analyze",{
-  method:"POST",
-  headers:{"Content-Type":"application/json"},
-        body:JSON.stringify({model:MODEL,max_tokens:4000,messages:[{role:"user",content:prompt}]})
+      const res = await fetch("/api/analyze", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ prompt }),
       });
+
       const data = await res.json();
-      if (data.error) throw new Error(data.error.message);
-      const raw = data.content?.map(b=>b.text||"").join("")||"";
+      if (data.error) throw new Error(data.error);
+
+      const raw = data.text || "";
+
+      // Robust bracket-matching JSON extraction
       const start = raw.indexOf("{");
-      if (start===-1) throw new Error("No JSON in response");
-      let depth=0, jsonStr="";
-      for(let i=start;i<raw.length;i++){
-        if(raw[i]==="{") depth++;
-        else if(raw[i]==="}"){depth--;if(depth===0){jsonStr=raw.slice(start,i+1);break;}}
+      if (start === -1) throw new Error("No JSON found in response");
+      let depth = 0, jsonStr = "";
+      for (let i = start; i < raw.length; i++) {
+        if (raw[i] === "{") depth++;
+        else if (raw[i] === "}") { depth--; if (depth === 0) { jsonStr = raw.slice(start, i + 1); break; } }
       }
-      if(!jsonStr) throw new Error("Response was cut off, please try again.");
-      setResult({...JSON.parse(jsonStr), mode});
-    } catch(e) {
-      console.error(e);
-      setResult({error: e.message, mode});
+      if (!jsonStr) throw new Error("Response was cut off. Please try again.");
+
+      const parsed = JSON.parse(jsonStr);
+      setResult({ ...parsed, mode });
+    } catch (e) {
+      console.error("LexGuard Error:", e);
+      setResult({ error: e.message, mode });
     }
     setLoading(false);
-  };
-
+    
   const exportTxt = () => {
     if (!result) return;
     const items = result.clauses||result.deviations||[];
