@@ -1,7 +1,5 @@
 import { useState, useRef, useCallback } from "react";
 
-const MODEL = "claude-sonnet-4-20250514";
-
 const css = `
   @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=DM+Mono:wght@300;400;500&family=DM+Sans:wght@300;400;500;600&display=swap');
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -15,12 +13,7 @@ const css = `
   html, body, #root { height: 100%; }
   body { font-family: 'DM Sans', sans-serif; background: var(--cream); color: var(--ink); }
   .app { min-height: 100vh; display: grid; grid-template-rows: auto 1fr; }
-  .header {
-    background: var(--ink); padding: 0 40px;
-    display: flex; align-items: center; justify-content: space-between;
-    height: 64px; border-bottom: 2px solid var(--gold);
-    position: sticky; top: 0; z-index: 100;
-  }
+  .header { background: var(--ink); padding: 0 40px; display: flex; align-items: center; justify-content: space-between; height: 64px; border-bottom: 2px solid var(--gold); position: sticky; top: 0; z-index: 100; }
   .logo { display: flex; align-items: center; gap: 12px; }
   .logo-icon { width: 36px; height: 36px; background: var(--gold); border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 18px; }
   .logo-text { font-family: 'Playfair Display', serif; color: white; font-size: 22px; font-weight: 700; }
@@ -114,11 +107,6 @@ const css = `
   .lstep:nth-child(2) .ldot { animation-delay: 0.3s; }
   .lstep:nth-child(3) .ldot { animation-delay: 0.6s; }
   @keyframes pulse { 0%,100%{opacity:0.3} 50%{opacity:1} }
-  .apibox { background: #fffbf0; border: 1px solid var(--gold); border-radius: 10px; padding: 14px; }
-  .apibox label { font-size: 11px; font-family: 'DM Mono', monospace; color: var(--muted); letter-spacing: 1px; text-transform: uppercase; display: block; margin-bottom: 6px; }
-  .apikey { width: 100%; border: 1px solid var(--border); border-radius: 6px; padding: 8px 10px; font-family: 'DM Mono', monospace; font-size: 11px; background: white; outline: none; color: var(--ink); }
-  .apikey:focus { border-color: var(--gold); }
-  .apinote { font-size: 11px; color: var(--muted); margin-top: 6px; line-height: 1.5; }
   ::-webkit-scrollbar { width: 6px; } ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
   @keyframes fadeUp { from{opacity:0;transform:translateY(12px)} to{opacity:1;transform:translateY(0)} }
   .fu { animation: fadeUp 0.35s ease forwards; }
@@ -141,7 +129,7 @@ This NDA is between TechCorp Pvt. Ltd. ("Disclosing Party") and the undersigned 
 
 6. LIQUIDATED DAMAGES: Breach results in $500,000 USD per incident plus ALL legal fees, regardless of actual damages.
 
-7. DATA RETENTION: Disclosing Party may retain and use Receiving Party's information for UNLIMITED PERIOD for any business purpose.`;
+7. DATA RETENTION: Disclosing Party may retain and use Receiving Party information for UNLIMITED PERIOD for any business purpose.`;
 
 const TYPES = ["NDA","Employment","Vendor","SaaS","IP License","Freelance"];
 const MODES = ["Risk Scanner","Comparison","Compliance"];
@@ -201,16 +189,11 @@ export default function App() {
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState(null);
   const [drag, setDrag] = useState(false);
-  const [apiKey, setApiKey] = useState(() => localStorage.getItem("lg_key")||"");
   const fileRef = useRef();
-
-  const saveKey = (v) => { setApiKey(v); localStorage.setItem("lg_key", v); };
 
   const onFile = useCallback(async f => { if(f) setText(await f.text()); },[]);
 
   const analyze = async () => {
-    const key = apiKey.trim() || import.meta.env.VITE_ANTHROPIC_API_KEY;
-    if (!key) { alert("Please enter your Anthropic API key first."); return; }
     if (!text.trim()) return;
     setLoading(true); setResult(null);
 
@@ -255,30 +238,25 @@ JSON (strings under 100 chars):
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ prompt }),
       });
-
       const data = await res.json();
       if (data.error) throw new Error(data.error);
-
       const raw = data.text || "";
-
-      // Robust bracket-matching JSON extraction
       const start = raw.indexOf("{");
-      if (start === -1) throw new Error("No JSON found in response");
-      let depth = 0, jsonStr = "";
-      for (let i = start; i < raw.length; i++) {
-        if (raw[i] === "{") depth++;
-        else if (raw[i] === "}") { depth--; if (depth === 0) { jsonStr = raw.slice(start, i + 1); break; } }
+      if (start===-1) throw new Error("No JSON found in response");
+      let depth=0, jsonStr="";
+      for(let i=start;i<raw.length;i++){
+        if(raw[i]==="{") depth++;
+        else if(raw[i]==="}"){depth--;if(depth===0){jsonStr=raw.slice(start,i+1);break;}}
       }
-      if (!jsonStr) throw new Error("Response was cut off. Please try again.");
-
-      const parsed = JSON.parse(jsonStr);
-      setResult({ ...parsed, mode });
-    } catch (e) {
-      console.error("LexGuard Error:", e);
-      setResult({ error: e.message, mode });
+      if(!jsonStr) throw new Error("Response was cut off. Please try again.");
+      setResult({...JSON.parse(jsonStr), mode});
+    } catch(e) {
+      console.error("LexGuard Error:",e);
+      setResult({error: e.message, mode});
     }
     setLoading(false);
-    
+  };
+
   const exportTxt = () => {
     if (!result) return;
     const items = result.clauses||result.deviations||[];
@@ -286,9 +264,9 @@ JSON (strings under 100 chars):
       "═══════════════════════════════════════════════",
       "  LEXGUARD AI — CONTRACT ANALYSIS REPORT",
       "═══════════════════════════════════════════════",
-      `  Date     : ${new Date().toLocaleString("en-IN")}`,
-      `  Type     : ${type}  |  Mode: ${mode}`,
-      `  Risk     : ${result.overallRiskScore}/100 (${result.overallRiskLevel})`,
+      `  Date : ${new Date().toLocaleString("en-IN")}`,
+      `  Type : ${type}  |  Mode: ${mode}`,
+      `  Risk : ${result.overallRiskScore}/100 (${result.overallRiskLevel})`,
       "═══════════════════════════════════════════════","",
       "SUMMARY","───────",result.summary||"","",
       `FLAGGED CLAUSES (${items.length})`, "───────",
@@ -303,7 +281,7 @@ JSON (strings under 100 chars):
       lines.push("INDIA COMPLIANCE","───────");
       result.complianceFlags.forEach(f=>lines.push(`  [${f.status}] ${f.law}: ${f.note}`));
     }
-    lines.push("","═══════════════════════════════════════════════","  LexGuard AI | Powered by Anthropic Claude","═══════════════════════════════════════════════");
+    lines.push("","═══════════════════════════════════════════════","  LexGuard AI | Powered by Google Gemini","═══════════════════════════════════════════════");
     const blob = new Blob([lines.join("\n")],{type:"text/plain;charset=utf-8"});
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
@@ -329,18 +307,6 @@ JSON (strings under 100 chars):
 
         <div className="main">
           <aside className="sidebar">
-
-            {/* API Key input — only shows if no env key */}
-            <div className="apibox">
-              <label>Anthropic API Key</label>
-              <input className="apikey" type="password" placeholder="sk-ant-api03-..."
-                value={apiKey} onChange={e=>saveKey(e.target.value)}/>
-              <div className="apinote">
-                Get free key at <strong>console.anthropic.com</strong><br/>
-                Saved in your browser only.
-              </div>
-            </div>
-
             <div>
               <div className="slabel">Analysis Mode</div>
               <div className="mode-tabs">
@@ -363,7 +329,7 @@ JSON (strings under 100 chars):
             </div>
 
             <div>
-              <div className={`upload-zone${drag?" drag":""}`} style={{position:"relative"}}
+              <div className={`upload-zone${drag?" drag":""}`}
                 onDragOver={e=>{e.preventDefault();setDrag(true);}}
                 onDragLeave={()=>setDrag(false)}
                 onDrop={e=>{e.preventDefault();setDrag(false);onFile(e.dataTransfer.files[0]);}}
@@ -400,7 +366,6 @@ JSON (strings under 100 chars):
             <button className="abtn" onClick={analyze} disabled={loading||!text.trim()}>
               {loading?<><div className="spin"/>Analyzing...</>:`⚡ Analyze ${type}`}
             </button>
-
           </aside>
 
           <main className="content">
@@ -434,7 +399,7 @@ JSON (strings under 100 chars):
               <div className="errbox">
                 <strong>⚠ Analysis Error</strong>
                 <p>{result.error}</p>
-                <p style={{marginTop:8}}>Tip: Try "Load Sample" to test, or check your API key is correct.</p>
+                <p style={{marginTop:8}}>Tip: Try "Load Sample" to test with the sample NDA.</p>
               </div>
             )}
 
